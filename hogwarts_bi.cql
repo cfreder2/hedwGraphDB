@@ -1,8 +1,8 @@
 //delete all nodes with relationships
-match (n)-[r]-(m) delete n,r,m
+MATCH (n)-[r]-(m) delete n,r,m;
 
 //delete all non-linked nodes
-match (n) delete n;
+MATCH (n) delete n;
 
 //create our fake Hogwarts "BI' data
 CREATE 
@@ -69,41 +69,42 @@ CREATE
  (argus)-[:VIEWED {view_counter:43}]->(cu),
  (flitwick)-[:VIEWED {view_counter:2}]->(pir),
  (minerva)-[:VIEWED {view_counter:8}]->(pir),
- (minerva)-[:VIEWED {view_counter:4}]->(cu)
+ (minerva)-[:VIEWED {view_counter:4}]->(cu);
 
 //show me the whole graph
-match (n)-[r]-(m) return n,r
+MATCH (n)-[r]-(m) return n,r;
 
 //show me only the hogwarts department structure
-match (a)-[:MANAGES]-(b) return a,b
+MATCH (a)-[:MANAGES]-(b) return a,b;
 
 //show me the terms and their relations
-match (t:Term)-[r]-(m) return t, r, m 
+MATCH (t:Term)-[r]-(m) return t, r, m;
 
 //show me terms, reports, and roles
-match (term)-[:USED_IN]-(report)-[:CAN_VIEW]-(role) return term, report, role 
+MATCH (term)-[:USED_IN]->(report)<-[:CAN_VIEW]-(role) return term, report, role;
 
 //What is the list of reports that the Dean Analyst can see?
 //Variable length relationships: syntax: -[:TYPE*minHops..maxHops]->. minHops and maxHops are optional
-MATCH (r:Role)-[:CAN_VIEW*]-(report:Report) where r.name = "Dean Analyst" return report.name;
+MATCH (r:Role)-[:CAN_VIEW*]->(report:Report) where r.name = "Dean Analyst" return report.name;
 
-//Users who viewed "Witch Headcount Trend" also viewed...
-MATCH (report_a)-[:VIEWED]-(user)-[v:VIEWED]-(report_b) where report_a.name = "Witch Headcount Trend" RETURN report_b.name, sum(v.view_counter) as total_views ORDER by total_views desc limit 2
+//Assume I'm looking at the Witch Headcount Trend Report.
+//Recommend to me a report using the logic "users who viewed this also viewed" pattern.
+MATCH (report_a)<-[:VIEWED]-(user)-[v:VIEWED]->(report_b) where report_a.name = "Witch Headcount Trend" RETURN report_b.name, sum(v.view_counter) as total_views ORDER by total_views desc limit 2;
 
-//Impact Analysis: Which reports would be impacted by a change in "active student"
-MATCH (term)-[:USED_IN]-(report) where term.name = "Active Student" RETURN report
+//Impact Analysis - Which reports would be impacted by a change in "active student"
+MATCH (term)-[:USED_IN]-(report) where term.name = "Active Student" RETURN report.name;
 
-//Impact Analysis: Which roles would be impacted by a change in "active student"
+//Impact Analysis - Which roles would be impacted by a change in "active student"
 MATCH (term:Term)-[:USED_IN]->(report),
-	  (role:Role)-[:CAN_VIEW*]->(report) RETURN role
+	  (role:Role)-[:CAN_VIEW*]->(report) RETURN distinct role.name;
 
-//Impact Analysis: Which users might be impacted by a change in "active student"
-MATCH (term:Term)-[:USED_IN]->(report),
-	  (role:Role)-[:CAN_VIEW*]->(report),
-	  (role)<-[:HAS_ROLE]-(user) where term.name = "Active Student" RETURN user
-
-//Impact Analysis: Which users might be impacted by a change in "Student Type"
+//Impact Analysis - Which users might be impacted by a change in "active student"
 MATCH (term:Term)-[:USED_IN]->(report),
 	  (role:Role)-[:CAN_VIEW*]->(report),
-	  (role)<-[:HAS_ROLE]-(user) where term.name = "Student Type" RETURN user
+	  (role)<-[:HAS_ROLE]-(user) where term.name = "Active Student" RETURN distinct user.name;
+
+//Impact Analysis - Which users might be impacted by a change in "Student Type"
+MATCH (term:Term)-[:USED_IN]->(report),
+	  (role:Role)-[:CAN_VIEW*]->(report),
+	  (role)<-[:HAS_ROLE]-(user) where term.name = "Student Type" RETURN distinct user.name;
 
